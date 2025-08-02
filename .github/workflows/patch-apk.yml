@@ -1,4 +1,4 @@
-name: Manual Patching with Apktool
+name: Patch APK using apk-mitm
 
 on:
   workflow_dispatch:
@@ -15,57 +15,34 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v4
 
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+
     - name: Set up Java
       uses: actions/setup-java@v3
       with:
         distribution: 'temurin'
         java-version: '17'
 
+    - name: Install apk-mitm
+      run: npm install -g apk-mitm
+
     - name: Download latest apktool
       run: |
         curl -L -o apktool.jar 'https://github.com/iBotPeaches/Apktool/releases/download/v2.12.0/apktool_2.12.0.jar'
-
-    - name: Download latest uber-apk-signer
-      run: |
-        curl -L -o uber-apk-signer.jar 'https://github.com/patrickfav/uber-apk-signer/releases/download/v1.3.0/uber-apk-signer-1.3.0.jar'
-
+        
     - name: Download APK
       run: |
+        echo "Downloading APK..."
         curl -L -o base.apk 'https://files.catbox.moe/v9h8jj.apk'
-
-    - name: Decompile APK
-      run: java -jar apktool.jar d base.apk -o decompiled_app
-
-    - name: Modify Manifest and other files
-      run: |
-        # This is where you would manually apply the patches
-        # 1. Add network_security_config.xml
-        mkdir -p decompiled_app/res/xml
-        echo '<?xml version="1.0" encoding="utf-8"?>
-        <network-security-config>
-            <base-config cleartextTrafficPermitted="true">
-                <trust-anchors>
-                    <certificates src="system" />
-                    <certificates src="user" />
-                </trust-anchors>
-            </base-config>
-        </network-security-config>' > decompiled_app/res/xml/network_security_config.xml
         
-        # 2. Modify AndroidManifest.xml to reference the config
-        sed -i 's|<application|<application android:networkSecurityConfig="@xml/network_security_config"|' decompiled_app/AndroidManifest.xml
-        
-        # 3. Clean up the manifest to avoid signing errors
-        # This removes the "apksigner" section which can cause issues
-        sed -i '/^  apksigner:/{N;d;}' decompiled_app/apktool.yml
+    - name: Patch APK with latest apktool and --no-crunch
+      run: apk-mitm --apktool ./apktool.jar --no-crunch base.apk patched-base.apk
 
-    - name: Recompile APK
-      run: java -jar apktool.jar b decompiled_app -o patched-base.apk
-
-    - name: Sign patched APK
-      run: java -jar uber-apk-signer.jar -a patched-base.apk
-    
     - name: Upload patched APK
       uses: actions/upload-artifact@v4
       with:
         name: patched-base-apk
-        path: patched-base-apk
+        path: patched-base.apk
