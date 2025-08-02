@@ -1,0 +1,53 @@
+name: Patch APK using apk-mitm with Manifest Clean
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+  id-token: write
+
+jobs:
+  patch-apk:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install apk-mitm and apktool
+        run: |
+          npm install -g apk-mitm
+          wget https://raw.githubusercontent.com/iBotPeaches/Apktool/master/scripts/linux/apktool
+          wget https://bitbucket.org/iBotPeaches/apktool/downloads/apktool_2.9.3.jar -O apktool.jar
+          chmod +x apktool
+          sudo mv apktool /usr/local/bin/
+          sudo mv apktool.jar /usr/local/bin/
+
+      - name: Download APK from catbox
+        run: |
+          echo "Downloading APK..."
+          curl -L -o base.apk 'https://files.catbox.moe/uzl6jg.apk'
+
+      - name: Decode APK and clean AndroidManifest.xml
+        run: |
+          apktool d base.apk -o decoded-apk -f
+          sed -i '/android:debuggable="true"/d' decoded-apk/AndroidManifest.xml
+          sed -i '/android:extractNativeLibs="true"/d' decoded-apk/AndroidManifest.xml
+          sed -i '/android:allowBackup="false"/d' decoded-apk/AndroidManifest.xml
+          apktool b decoded-apk -o cleaned-base.apk
+
+      - name: Patch Cleaned APK
+        run: apk-mitm cleaned-base.apk patched-base.apk
+
+      - name: Upload patched APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: patched-base-apk
+          path: patched-base.apk
