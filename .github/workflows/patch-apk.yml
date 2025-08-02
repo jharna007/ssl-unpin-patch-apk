@@ -1,5 +1,4 @@
-jobs:
-  patch-apk:
+ name: patch-apk
     runs-on: ubuntu-latest
 
     steps:
