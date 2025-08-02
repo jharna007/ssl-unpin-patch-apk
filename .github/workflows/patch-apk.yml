@@ -1,0 +1,39 @@
+name: Patch APK using apk-mitm
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+  id-token: write
+
+jobs:
+  patch-apk:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+
+    - name: Install apk-mitm
+      run: npm install -g apk-mitm
+
+    - name: Download APK from Google Drive
+      run: |
+        echo "Downloading APK..."
+        curl -L -o base.apk 'https://drive.google.com/file/d/1kLSGL_aobogGnvoQ-Ey4OBdSHP7if9JI/view?usp=drivesdk'
+
+    - name: Patch APK
+      run: apk-mitm base.apk patched-base.apk
+
+    - name: Upload patched APK
+      uses: actions/upload-artifact@v4
+      with:
+        name: patched-base-apk
+        path: patched-base.apk
