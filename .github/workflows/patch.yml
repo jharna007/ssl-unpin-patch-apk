@@ -1,4 +1,4 @@
-name: Patch APK using apk-mitm with Manifest Clean
+name: Patch APK using apk-mitm
 
 on:
   workflow_dispatch:
@@ -13,41 +13,46 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+    - name: Checkout repository
+      uses: actions/checkout@v4
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
 
-      - name: Install apk-mitm and apktool
-        run: |
-          npm install -g apk-mitm
-          wget https://raw.githubusercontent.com/iBotPeaches/Apktool/master/scripts/linux/apktool
-          wget https://bitbucket.org/iBotPeaches/apktool/downloads/apktool_2.9.3.jar -O apktool.jar
-          chmod +x apktool
-          sudo mv apktool /usr/local/bin/
-          sudo mv apktool.jar /usr/local/bin/
+    - name: Install apk-mitm and apktool
+      run: |
+        npm install -g apk-mitm
+        wget https://github.com/iBotPeaches/Apktool/releases/download/v2.9.3/apktool_2.9.3.jar -O apktool.jar
+        echo -e '#!/bin/sh\njava -jar apktool.jar "$@"' > apktool
+        chmod +x apktool
+        sudo mv apktool /usr/local/bin/
+        sudo mv apktool.jar /usr/local/bin/
 
-      - name: Download APK from catbox
-        run: |
-          echo "Downloading APK..."
-          curl -L -o base.apk 'https://files.catbox.moe/uzl6jg.apk'
+    - name: Download APK from Catbox
+      run: |
+        echo "Downloading APK..."
+        curl -L -o base.apk 'https://files.catbox.moe/uzl6jg.apk'
 
-      - name: Decode APK and clean AndroidManifest.xml
-        run: |
-          apktool d base.apk -o decoded-apk -f
-          sed -i '/android:debuggable="true"/d' decoded-apk/AndroidManifest.xml
-          sed -i '/android:extractNativeLibs="true"/d' decoded-apk/AndroidManifest.xml
-          sed -i '/android:allowBackup="false"/d' decoded-apk/AndroidManifest.xml
-          apktool b decoded-apk -o cleaned-base.apk
+    - name: Decode APK using apktool
+      run: apktool d base.apk -o decoded-apk -f
 
-      - name: Patch Cleaned APK
-        run: apk-mitm cleaned-base.apk patched-base.apk
+    - name: Auto-fix malformed AndroidManifest.xml (missing </manifest>)
+      run: |
+        if ! grep -q "</manifest>" decoded-apk/AndroidManifest.xml; then
+          echo "Detected missing </manifest> tag. Appending..."
+          echo "</manifest>" >> decoded-apk/AndroidManifest.xml
+        fi
 
-      - name: Upload patched APK
-        uses: actions/upload-artifact@v4
-        with:
-          name: patched-base-apk
-          path: patched-base.apk
+    - name: Rebuild APK to check manifest fix
+      run: apktool b decoded-apk -o rebuilt.apk
+
+    - name: Patch APK using apk-mitm
+      run: apk-mitm rebuilt.apk patched.apk
+
+    - name: Upload patched APK
+      uses: actions/upload-artifact@v4
+      with:
+        name: patched-base-apk
+        path: patched.apk
