@@ -27,7 +27,7 @@ jobs:
     - name: Download APK from Google Drive
       run: |
         echo "Downloading APK..."
-        curl -L -o base.apk 'https://files.catbox.moe/v9h8jj.apk'
+        curl -L -o base.apk 'https://files.catbox.moe/uzl6jg.apk⏎'
 
     - name: Patch APK
       run: apk-mitm base.apk patched-base.apk
