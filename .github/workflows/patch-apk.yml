@@ -29,7 +29,6 @@ jobs:
     - name: Install apk-mitm
       run: npm install -g apk-mitm
 
-    # Use the latest stable version of Apktool (e.g., v2.9.3)
     - name: Download latest stable apktool
       run: |
         curl -L -o apktool.jar 'https://github.com/iBotPeaches/Apktool/releases/download/v2.9.3/apktool_2.9.3.jar'
@@ -39,10 +38,10 @@ jobs:
         echo "Downloading APK..."
         curl -L -o base.apk 'https://files.catbox.moe/uzl6jg.apk'
 
-    - name: Patch APK with stable apktool and --no-crunch
-      run: apk-mitm --apktool ./apktool.jar --no-crunch base.apk patched-base.apk
+    - name: Patch APK with --use-aapt1
+      # Add --use-aapt1 to force the older resource compiler, which can fix stubborn errors.
+      run: apk-mitm --apktool ./apktool.jar --use-aapt1 --no-crunch base.apk patched-base.apk
 
-    # Correct the artifact path to match the output file name
     - name: Upload patched APK
       uses: actions/upload-artifact@v4
       with:
