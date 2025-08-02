@@ -1,4 +1,4 @@
-name: Hybrid Patching with apk-mitm
+name: Patch APK using apk-mitm
 
 on:
   workflow_dispatch:
@@ -6,6 +6,7 @@ on:
 permissions:
   contents: read
   actions: read
+  id-token: write
 
 jobs:
   patch-apk:
@@ -20,36 +21,18 @@ jobs:
       with:
         node-version: '20'
 
-    - name: Set up Java
-      uses: actions/setup-java@v3
-      with:
-        distribution: 'temurin'
-        java-version: '17'
-
     - name: Install apk-mitm
       run: npm install -g apk-mitm
 
-    - name: Download APK
+    - name: Download APK from Google Drive
       run: |
         echo "Downloading APK..."
         curl -L -o base.apk 'https://files.catbox.moe/uzl6jg.apk'
-
-    - name: Decompile APK
-      run: java -jar ~/.cache/apk-mitm/apktool-v2.9.3.jar d base.apk -o decompiled-app
-
-    - name: Fix AndroidManifest.xml
-      run: |
-        # Use a more robust sed command to remove potentially problematic attributes
-        sed -i 's|android:isSplitRequired="true"||g' decompiled-app/AndroidManifest.xml
-
-    - name: Rebuild APK with apktool
-      run: java -jar ~/.cache/apk-mitm/apktool-v2.9.3.jar b decompiled-app -o base-patched.apk
-
-    - name: Run apk-mitm to apply patches and resign
-      run: apk-mitm base-patched.apk final-patched.apk
+    - name: Patch APK
+      run: apk-mitm base.apk patched-base.apk
 
     - name: Upload patched APK
       uses: actions/upload-artifact@v4
       with:
-        name: final-patched-apk
-        path: final-patched.apk
+        name: patched-base-apk
+        path: base-patched.apk
