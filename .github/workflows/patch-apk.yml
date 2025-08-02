@@ -1,38 +1,43 @@
-name: Patch APK with apk-mitm
+name: Patch APK using apk-mitm
 
 on:
   workflow_dispatch:
 
 jobs:
-  patch:
+  patch-apk:
     runs-on: ubuntu-latest
+
     steps:
-      - name: Checkout
-        uses: actions/checkout@v3
+    - name: Checkout repository
+      uses: actions/checkout@v4
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
 
-      - name: Install apk-mitm
-        run: npm install -g apk-mitm
+    - name: Install apk-mitm
+      run: npm install -g apk-mitm
 
-      - name: Download APK from Google Drive
-        run: |
-          FILEID="1kLSGL_aobogGnvoQ-Ey4OBdSHP7if9JI"
-          FILENAME="base.apk"
+    - name: Download APK from Google Drive
+      run: |
+        FILEID="1kLSGL_aobogGnvoQ-Ey4OBdSHP7if9JI"
+        FILENAME="base.apk"
 
-          CONFIRM=$(curl -sc /tmp/gcookie "https://drive.google.com/uc?export=download&id=${FILEID}" | \
-                    grep -o 'confirm=[^&]*' | sed 's/confirm=//')
+        curl -c /tmp/cookies.txt -s -L "https://drive.google.com/uc?export=download&id=${FILEID}" > /tmp/intermediate.html
 
-          curl -Lb /tmp/gcookie "https://drive.google.com/uc?export=download&confirm=${CONFIRM}&id=${FILEID}" -o "${FILENAME}"
+        CONFIRM=$(grep -oP 'confirm=\K[^&]+' /tmp/intermediate.html | head -n 1)
 
-      - name: Patch APK with apk-mitm
-        run: apk-mitm base.apk patched-base.apk
+        curl -Lb /tmp/cookies.txt "https://drive.google.com/uc?export=download&confirm=${CONFIRM}&id=${FILEID}" -o ${FILENAME}
 
-      - name: Upload patched APK
-        uses: actions/upload-artifact@v4
-        with:
-          name: patched-apk
-          path: patched-base.apk
+        file ${FILENAME}
+        unzip -t ${FILENAME} || echo "⚠️ Warning: APK might be corrupt"
+
+    - name: Patch APK
+      run: apk-mitm base.apk patched-base.apk
+
+    - name: Upload patched APK
+      uses: actions/upload-artifact@v4
+      with:
+        name: patched-base-apk
+        path: patched-base.apk
