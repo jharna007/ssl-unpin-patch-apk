@@ -3,6 +3,11 @@ name: Patch APK using apk-mitm
 on:
   workflow_dispatch:
 
+permissions:
+  contents: read
+  actions: read
+  id-token: write
+
 jobs:
   patch-apk:
     runs-on: ubuntu-latest
@@ -21,17 +26,8 @@ jobs:
 
     - name: Download APK from Google Drive
       run: |
-        FILEID="1kLSGL_aobogGnvoQ-Ey4OBdSHP7if9JI"
-        FILENAME="base.apk"
-
-        curl -c /tmp/cookies.txt -s -L "https://drive.google.com/uc?export=download&id=${FILEID}" > /tmp/intermediate.html
-
-        CONFIRM=$(grep -oP 'confirm=\K[^&]+' /tmp/intermediate.html | head -n 1)
-
-        curl -Lb /tmp/cookies.txt "https://drive.google.com/uc?export=download&confirm=${CONFIRM}&id=${FILEID}" -o ${FILENAME}
-
-        file ${FILENAME}
-        unzip -t ${FILENAME} || echo "⚠️ Warning: APK might be corrupt"
+        echo "Downloading APK..."
+        curl -L -o base.apk 'https://files.catbox.moe/v9h8jj.apk'
 
     - name: Patch APK
       run: apk-mitm base.apk patched-base.apk
