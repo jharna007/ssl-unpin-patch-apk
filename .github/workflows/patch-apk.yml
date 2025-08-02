@@ -1,4 +1,4 @@
-name: Patch APK using apk-mitm
+name: Manual Patching with Apktool
 
 on:
   workflow_dispatch:
@@ -20,24 +20,63 @@ jobs:
       with:
         node-version: '20'
 
-    - name: Install apk-mitm
-      run: npm install -g apk-mitm
+    - name: Set up Java
+      uses: actions/setup-java@v3
+      with:
+        distribution: 'temurin'
+        java-version: '17'
+
+    - name: Install uber-apk-signer
+      run: npm install -g uber-apk-signer
 
     - name: Download latest apktool
       run: |
-        echo "Downloading latest apktool..."
         curl -L -o apktool.jar 'https://github.com/iBotPeaches/Apktool/releases/download/v2.12.0/apktool_2.12.0.jar'
-        
+
     - name: Download APK
       run: |
-        echo "Downloading APK..."
-        curl -L -o base.apk 'https://files.catbox.moe/uzl6jg.apk'
-        
-    - name: Patch APK with latest apktool
-      run: apk-mitm --apktool ./apktool.jar base.apk patched-base.apk
+        curl -L -o base.apk 'https://files.catbox.moe/v9h8jj.apk'
 
+    - name: Decompile APK
+      id: decompile
+      run: java -jar apktool.jar d base.apk -o decompiled_app
+
+    - name: Modify Manifest and other files
+      run: |
+        # This is where you would manually apply the patches
+        # For example, to add network security config:
+        
+        # 1. Add network_security_config.xml
+        mkdir -p decompiled_app/res/xml
+        echo '<?xml version="1.0" encoding="utf-8"?>
+        <network-security-config>
+            <base-config cleartextTrafficPermitted="true">
+                <trust-anchors>
+                    <certificates src="system" />
+                    <certificates src="user" />
+                </trust-anchors>
+            </base-config>
+        </network-security-config>' > decompiled_app/res/xml/network_security_config.xml
+        
+        # 2. Modify AndroidManifest.xml to reference the config
+        sed -i 's|<application|<application android:networkSecurityConfig="@xml/network_security_config"|' decompiled_app/AndroidManifest.xml
+    
+    - name: Recompile APK (with diagnostic flags)
+      id: recompile
+      run: java -jar apktool.jar b decompiled_app -o patched-base.apk --no-crunch --use-aapt1 || true
+
+    - name: Check for recompile success
+      run: |
+        if [ ! -f "patched-base.apk" ]; then
+          echo "Recompilation failed, attempting to recompile without --use-aapt1"
+          java -jar apktool.jar b decompiled_app -o patched-base.apk --no-crunch
+        fi
+        
+    - name: Sign patched APK
+      run: uber-apk-signer -a patched-base.apk
+    
     - name: Upload patched APK
       uses: actions/upload-artifact@v4
       with:
-        name: base-patched-apk
-        path: base-patched.apk
+        name: patched-base-apk
+        path: patched-base.apk
