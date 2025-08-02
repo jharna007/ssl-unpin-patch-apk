@@ -31,7 +31,7 @@ jobs:
     - name: Download APK
       run: |
         echo "Downloading APK..."
-        curl -L -o base.apk 'https://files.catbox.moe/uzl6jg.apk⏎'
+        curl -L -o base.apk 'https://files.catbox.moe/uzl6jg.apk'
         
     - name: Patch APK with latest apktool
       run: apk-mitm --apktool ./apktool.jar base.apk patched-base.apk
