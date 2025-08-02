@@ -1,4 +1,14 @@
- name: patch-apk
+name: Hybrid Patching with apk-mitm
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  patch-apk:
     runs-on: ubuntu-latest
 
     steps:
@@ -19,39 +29,27 @@
     - name: Install apk-mitm
       run: npm install -g apk-mitm
 
-    - name: Download tools
-      run: |
-        echo "Downloading Apktool..."
-        curl -L -o apktool.jar 'https://github.com/iBotPeaches/Apktool/releases/download/v2.9.3/apktool_2.9.3.jar'
-        
-        echo "Downloading uber-apk-signer..."
-        curl -L -o uber-apk-signer.jar 'https://github.com/patrickfav/uber-apk-signer/releases/download/v1.3.0/uber-apk-signer-1.3.0.jar'
-
     - name: Download APK
       run: |
         echo "Downloading APK..."
         curl -L -o base.apk 'https://files.catbox.moe/uzl6jg.apk'
 
-    - name: Run Manual Patching Process
+    - name: Decompile APK
+      run: java -jar ~/.cache/apk-mitm/apktool-v2.9.3.jar d base.apk -o decompiled-app
+
+    - name: Fix AndroidManifest.xml
       run: |
-        # 1. Decode APK without resources (-r) to avoid the compilation error
-        echo "--> Decoding APK (code only)..."
-        java -jar apktool.jar d -r -o decoded-apk base.apk
+        # Use a more robust sed command to remove potentially problematic attributes
+        sed -i 's|android:isSplitRequired="true"||g' decompiled-app/AndroidManifest.xml
 
-        # 2. Run apk-mitm on the decoded files to patch smali code
-        echo "--> Applying SSL Unpinning patches..."
-        apk-mitm --disassembly decoded-apk
+    - name: Rebuild APK with apktool
+      run: java -jar ~/.cache/apk-mitm/apktool-v2.9.3.jar b decompiled-app -o base-patched.apk
 
-        # 3. Rebuild the APK. Apktool will use the original resources from base.apk
-        echo "--> Rebuilding APK..."
-        java -jar apktool.jar b -o patched-unsigned.apk decoded-apk
-
-        # 4. Sign the rebuilt APK to make it installable
-        echo "--> Signing the patched APK..."
-        java -jar uber-apk-signer.jar -a patched-unsigned.apk -o patched-signed.apk
+    - name: Run apk-mitm to apply patches and resign
+      run: apk-mitm base-patched.apk final-patched.apk
 
     - name: Upload patched APK
       uses: actions/upload-artifact@v4
       with:
-        name: patched-base-apk
-        path: patched-signed.apk
+        name: final-patched-apk
+        path: final-patched.apk
