@@ -24,10 +24,10 @@ jobs:
     - name: Install apk-mitm
       run: npm install -g apk-mitm
 
-    - name: Download APK from Google Drive
+    - name: Download APK from external link
       run: |
         echo "Downloading APK..."
-        curl -L -o base.apk 'https://files.catbox.moe/lcgz6x.apk⏎'
+        curl -L -o base.apk 'https://files.catbox.moe/lcgz6x.apk'
     - name: Patch APK
       run: apk-mitm base.apk patched-base.apk
 
