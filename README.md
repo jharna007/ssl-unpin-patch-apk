@@ -32,7 +32,7 @@ The **latest patched APK** can be downloaded from the workflow run summary page.
 
 ## 🚀 How to use
 
-1. **Fork** or **clone** this repo.
+1. **Fork** this repo.
 2. Go to **Actions** → **Edit the `.github/workflows/patch-apk.yml` file** → Paste your apk download link inside the placeholder → **Run workflow**.  
 3. Wait ~1-2 minutes.  
 4. Download the artifact from the run summary page.
