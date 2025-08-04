@@ -30,7 +30,7 @@ jobs:
     - name: Download APK from external link
       run: |
         echo "Downloading APK..."
-        curl -L -o base.apk 'https://files.catbox.moe/jmlznw.apk' #<----- Paste ypur apk download link here
+        curl -L -o base.apk 'https://github.com/kaifcodec/Upload_apk/releases/download/v1.0.0/base.apk' #<----- Paste ypur apk download link here
     - name: Patch APK
       run: apk-mitm base.apk patched-base.apk
 
