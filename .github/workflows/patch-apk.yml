@@ -1,7 +1,10 @@
 name: Patch APK using apk-mitm
 
+
 on:
-  workflow_dispatch:
+  push:
+    branches:
+      - main
 
 permissions:
   contents: read
@@ -27,7 +30,7 @@ jobs:
     - name: Download APK from external link
       run: |
         echo "Downloading APK..."
-        curl -L -o base.apk 'APK_DOWNLOAD_LINK'
+        curl -L -o base.apk 'https://files.catbox.moe/t7b2t0.apk'
     - name: Patch APK
       run: apk-mitm base.apk patched-base.apk
 
